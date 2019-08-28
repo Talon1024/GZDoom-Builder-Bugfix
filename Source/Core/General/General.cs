@@ -62,6 +62,7 @@ namespace CodeImp.DoomBuilder
         {
             unsafe
             {
+                // I would like to use Span<byte> here
                 byte* Memory = (byte*)dest.ToPointer();
                 for(int i = 0; i < size; i++)
                 {
@@ -73,11 +74,12 @@ namespace CodeImp.DoomBuilder
 		//[DllImport("kernel32.dll", EntryPoint = "RtlMoveMemory", SetLastError = false)]
 		//internal static extern unsafe void CopyMemory(void* dst, void* src, uint length);
 
+        // TODO: Find suitable replacement for this Windows API call
 		[DllImport("user32.dll", EntryPoint = "SendMessage", SetLastError = true, CallingConvention = CallingConvention.StdCall)]
 		internal static extern int SendMessage(IntPtr hwnd, uint Msg, IntPtr wParam, IntPtr lParam);
 
-		[DllImport("user32.dll", SetLastError = true)]
-		internal static extern bool MessageBeep(MessageBeepType type);
+		//[DllImport("user32.dll", SetLastError = true)]
+		//internal static extern bool MessageBeep(MessageBeepType type);
 
         //[DllImport("kernel32.dll")]
         //internal extern static IntPtr LoadLibrary(string filename);
@@ -176,10 +178,10 @@ namespace CodeImp.DoomBuilder
 		private static TypesManager types;
 		private static ErrorLogger errorlogger;
 		private static string commithash; //mxd. Git commit hash
-		//private static Mutex appmutex;
-		
-		// Configurations
-		private static List<ConfigurationInfo> configs;
+        //private static Mutex appmutex;
+
+        // Configurations
+        private static List<ConfigurationInfo> configs;
 		private static List<CompilerInfo> compilers;
 		private static List<NodebuilderInfo> nodebuilders;
 		private static Dictionary<string, ScriptConfiguration> scriptconfigs;
@@ -250,8 +252,8 @@ namespace CodeImp.DoomBuilder
 
 #region ================== Configurations
 
-		// This returns the game configuration info by filename
-		internal static ConfigurationInfo GetConfigurationInfo(string filename)
+        // This returns the game configuration info by filename
+        internal static ConfigurationInfo GetConfigurationInfo(string filename)
 		{
 			// Go for all config infos
 			foreach(ConfigurationInfo ci in configs)
