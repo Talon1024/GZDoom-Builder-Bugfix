@@ -5,7 +5,9 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 using CodeImp.DoomBuilder.Rendering;
+#if Windows
 using ScintillaNET;
+#endif
 
 #endregion
 
@@ -13,59 +15,87 @@ namespace CodeImp.DoomBuilder.Controls
 {
 	internal partial class ScriptEditorPreviewControl : UserControl
 	{
-		#region ================== Constants
+#region ================== Constants
 
 		private const int HIGHLIGHT_INDICATOR = 8;
 
-		#endregion
+        #endregion
 
-		#region ================== Variables
-
-		private Dictionary<int, ScriptStyleType> styletranslation;
+        #region ================== Variables
+#if Windows
+        private Dictionary<int, ScriptStyleType> styletranslation;
 		private string highlightedword;
 		private Color indicatorcolor;
 		private int lastcaretpos;
-		private readonly HashSet<char> bracechars; 
+		private readonly HashSet<char> bracechars;
+#else
+        private string fontname;
+        private bool fontbold;
+        private int fontsize;
+#endif
 
-		#endregion
+#endregion
 
-		#region ================== Properties
+        #region ================== Properties
 
-		public string FontName { set { ApplyFont(value); } }
-		public int FontSize { set { ApplyFontSize(value); } }
-		public bool FontBold { set { ApplyFontBold(value); } }
-		public int TabWidth { set { scriptedit.TabWidth = value; } }
-		public bool ShowLineNumbers { set { UpdateLineNumbers(value); } }
+        public string FontName {
+            set { ApplyFont(value); }
+#if !Windows
+            get { return fontname; }
+#endif
+        }
+        public int FontSize
+        {
+            set { ApplyFontSize(value); }
+#if !Windows
+            get { return fontsize; }
+#endif
+        }
+        public bool FontBold {
+            set { ApplyFontBold(value); }
+#if !Windows
+            get { return fontbold; }
+#endif
+        }
+
+#if Windows
+        public int TabWidth { set { scriptedit.TabWidth = value; } }
+        public bool ShowLineNumbers { set { UpdateLineNumbers(value); } }
 		public bool ShowFolding { set { UpdateFolding(value); } }
+#endif
 
-		// Colors
-		public Color ScriptBackground 
+        // Colors
+        public Color ScriptBackground 
 		{ 
 			set
-			{ 
-				scriptedit.Styles[Style.Default].BackColor = value;
+			{
+#if Windows
+                scriptedit.Styles[Style.Default].BackColor = value;
 				scriptedit.CaretForeColor = PixelColor.FromColor(value).Inverse().ToColor();
 				scriptedit.Styles[Style.LineNumber].BackColor = value;
 				scriptedit.SetWhitespaceBackColor(true, value);
 
 				foreach(KeyValuePair<int, ScriptStyleType> group in styletranslation)
 					scriptedit.Styles[group.Key].BackColor = value;
-			} 
+#else
+                scriptedit.BackColor = value;
+#endif
+            } 
 		}
 
+#if Windows
 		public Color FoldForeColor { set { for(int i = 25; i < 32; i++) scriptedit.Markers[i].SetBackColor(value); } }
 		public Color FoldBackColor
 		{
 			set
 			{
-				scriptedit.SetFoldMarginColor(true, value);
+                scriptedit.SetFoldMarginColor(true, value);
 				scriptedit.SetFoldMarginHighlightColor(true, value);
 				for(int i = 25; i < 32; i++) scriptedit.Markers[i].SetForeColor(value);
-			}
-		}
+    }
+}
 
-		public Color LineNumbers { set { ApplyStyleColor(ScriptStyleType.LineNumber, value); } }
-		public Color PlainText { set { ApplyStyleColor(ScriptStyleType.PlainText, value); } }
+        public Color LineNumbers { set { ApplyStyleColor(ScriptStyleType.LineNumber, value); } }
 		public Color Comments { set { ApplyStyleColor(ScriptStyleType.Comment, value); } }
 		public Color Keywords { set { ApplyStyleColor(ScriptStyleType.Keyword, value); } }
 		public Color Properties { set { ApplyStyleColor(ScriptStyleType.Property, value); } }
@@ -73,8 +103,13 @@ namespace CodeImp.DoomBuilder.Controls
 		public Color Constants { set { ApplyStyleColor(ScriptStyleType.Constant, value); } }
 		public Color Strings { set { ApplyStyleColor(ScriptStyleType.String, value); } }
 		public Color Includes { set { ApplyStyleColor(ScriptStyleType.Include, value); } }
+        public Color PlainText { set { ApplyStyleColor(ScriptStyleType.PlainText, value); } }
+#else
+        public Color PlainText { set { scriptedit.ForeColor = value; } }
+#endif
 
-		public Color SelectionForeColor { set { scriptedit.SetSelectionForeColor(true, value); } }
+#if Windows
+        public Color SelectionForeColor { set { scriptedit.SetSelectionForeColor(true, value); } }
 		public Color SelectionBackColor { set { scriptedit.SetSelectionBackColor(true, value); } }
 		public Color WhitespaceColor
 		{
@@ -87,27 +122,32 @@ namespace CodeImp.DoomBuilder.Controls
 		public Color BraceHighlight { set { scriptedit.Styles[Style.BraceLight].BackColor = value; } }
 		public Color BadBraceHighlight { set { scriptedit.Styles[Style.BraceBad].BackColor = value; } }
 		public Color ScriptIndicator { set { indicatorcolor = value; UpdateWordHighlight(); } }
+#endif
 
-		#endregion
+#endregion
 
-		#region ================== Constructor / Setup
+#region ================== Constructor / Setup
 
-		public ScriptEditorPreviewControl()
+        public ScriptEditorPreviewControl()
 		{
 			InitializeComponent();
 
 			if(LicenseManager.UsageMode != LicenseUsageMode.Designtime)
 			{
-				bracechars = new HashSet<char> { '{', '}', '(', ')', '[', ']' };
-				SetupStyles();
+#if Windows
+                bracechars = new HashSet<char> { '{', '}', '(', ')', '[', ']' };
+#endif
+                SetupStyles();
+
 			}
 		}
 
 		// This sets up the script editor with default settings
 		private void SetupStyles()
 		{
-			// Symbol margin
-			scriptedit.Margins[0].Type = MarginType.Symbol;
+#if Windows
+            // Symbol margin
+            scriptedit.Margins[0].Type = MarginType.Symbol;
 			scriptedit.Margins[0].Width = 20;
 			scriptedit.Margins[0].Mask = 0; // No markers here
 			scriptedit.Margins[0].Cursor = MarginCursor.Arrow;
@@ -177,8 +217,8 @@ namespace CodeImp.DoomBuilder.Controls
 				{ 19, ScriptStyleType.Property },
 			};
 
-			// Set the default style and settings
-			scriptedit.Styles[Style.Default].Font = General.Settings.ScriptFontName;
+            // Set the default style and settings
+            scriptedit.Styles[Style.Default].Font = General.Settings.ScriptFontName;
 			scriptedit.Styles[Style.Default].Size = General.Settings.ScriptFontSize;
 			scriptedit.Styles[Style.Default].Bold = General.Settings.ScriptFontBold;
 			scriptedit.Styles[Style.Default].Italic = false;
@@ -240,43 +280,75 @@ namespace CodeImp.DoomBuilder.Controls
 				scriptedit.Styles[group.Key].ForeColor = General.Colors.Colors[colorindex].ToColor();
 				scriptedit.Styles[group.Key].BackColor = General.Colors.ScriptBackground.ToColor();
 			}
-
-			// Setup folding
-			UpdateFolding(General.Settings.ScriptShowFolding);
+            // Setup folding
+            UpdateFolding(General.Settings.ScriptShowFolding);
 
 			// Rearrange the layout
 			this.PerformLayout();
+#else
+            scriptedit.ForeColor = General.Colors.Colors[ColorCollection.PLAINTEXT].ToColor();
+            scriptedit.BackColor = General.Colors.ScriptBackground.ToColor();
+
+            FontStyle fontStyle = General.Settings.ScriptFontBold ? FontStyle.Bold : FontStyle.Regular;
+            scriptedit.Font = new Font(General.Settings.ScriptFontName, (float) General.Settings.ScriptFontSize, fontStyle);
+#endif
 		}
 
-		#endregion
+#endregion
 
-		#region ================== Methods
+#region ================== Methods
 
-		private void ApplyStyleColor(ScriptStyleType type, Color color)
+#if !Windows
+        private Font GetFont()
+        {
+            FontStyle fs = fontbold ? FontStyle.Bold : FontStyle.Regular;
+            Font font = new Font(fontname, (float) fontsize, fs);
+            return font;
+        }
+#endif
+
+#if Windows
+        private void ApplyStyleColor(ScriptStyleType type, Color color)
 		{
-			foreach(KeyValuePair<int, ScriptStyleType> group in styletranslation)
+            foreach(KeyValuePair<int, ScriptStyleType> group in styletranslation)
 				if(group.Value == type) scriptedit.Styles[group.Key].ForeColor = color;
-		}
+        }
+#endif
 
-		private void ApplyFont(string font)
+        private void ApplyFont(string font)
 		{
-			foreach(KeyValuePair<int, ScriptStyleType> group in styletranslation)
+#if Windows
+            foreach(KeyValuePair<int, ScriptStyleType> group in styletranslation)
 				scriptedit.Styles[group.Key].Font = font;
-		}
+#else
+            fontname = font;
+            scriptedit.Font = GetFont();
+#endif
+        }
 
 		private void ApplyFontBold(bool bold)
 		{
-			foreach(KeyValuePair<int, ScriptStyleType> group in styletranslation)
+#if Windows
+            foreach(KeyValuePair<int, ScriptStyleType> group in styletranslation)
 				scriptedit.Styles[group.Key].Bold = bold;
-		}
+#else
+            fontbold = bold;
+            scriptedit.Font = GetFont();
+#endif
+        }
 
 		private void ApplyFontSize(int size)
 		{
-			foreach(KeyValuePair<int, ScriptStyleType> group in styletranslation)
+#if Windows
+            foreach(KeyValuePair<int, ScriptStyleType> group in styletranslation)
 				scriptedit.Styles[group.Key].Size = size;
-		}
-
-		private void UpdateLineNumbers(bool show)
+#else
+            fontsize = size;
+            scriptedit.Font = GetFont();
+#endif
+        }
+#if Windows
+        private void UpdateLineNumbers(bool show)
 		{
 			if(show)
 			{
@@ -386,12 +458,13 @@ namespace CodeImp.DoomBuilder.Controls
 				scriptedit.TargetEnd = scriptedit.TextLength;
 			}
 		}
+        
+#endif
+#endregion
 
-		#endregion
-
-		#region ================== Events
-
-		private void scriptedit_UpdateUI(object sender, UpdateUIEventArgs e)
+#region ================== Events
+#if Windows
+        private void scriptedit_UpdateUI(object sender, UpdateUIEventArgs e)
 		{
 			UpdateWordHighlight();
 
@@ -424,7 +497,9 @@ namespace CodeImp.DoomBuilder.Controls
 				}
 			}
 		}
-
-		#endregion
+#endif
+#endregion
 	}
 }
+
+
